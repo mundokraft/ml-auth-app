@@ -15,6 +15,10 @@ const AuthCallbackPage = () => {
 
     const fetchToken = async () => {
       try {
+        const clientId = import.meta.env.VITE_MELI_CLIENT_ID || '';
+        const clientSecret = import.meta.env.VITE_MELI_CLIENT_SECRET || '';
+        const redirectUri = `${window.location.origin}/auth`;
+
         const response = await fetch('https://api.mercadolibre.com/oauth/token', {
           method: 'POST',
           headers: {
@@ -22,15 +26,16 @@ const AuthCallbackPage = () => {
           },
           body: new URLSearchParams({
             grant_type: 'authorization_code',
-            client_id: import.meta.env.VITE_MELI_CLIENT_ID!,
-            client_secret: import.meta.env.VITE_MELI_CLIENT_SECRET!,
-            code,
-            redirect_uri: `${window.location.origin}/auth`,
+            client_id: clientId,
+            client_secret: clientSecret,
+            code: code,
+            redirect_uri: redirectUri,
           }),
         });
 
         if (!response.ok) {
-          throw new Error('Erro ao trocar o código por um token');
+          const errText = await response.text();
+          throw new Error(`Erro ao trocar o código por um token: ${errText}`);
         }
 
         const data = await response.json();
