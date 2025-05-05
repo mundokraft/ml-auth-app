@@ -2,16 +2,14 @@ import { useEffect } from 'react';
 
 const LoginPage = () => {
   const CLIENT_ID = import.meta.env.VITE_MELI_CLIENT_ID;
-  const REDIRECT_URI = import.meta.env.VITE_MELI_REDIRECT_URI;
-
-  console.log("CLIENT_ID:", CLIENT_ID);
-  console.log("REDIRECT_URI:", REDIRECT_URI);
+  const REDIRECT_URI = import.meta.env.VITE_REDIRECT_URI;
 
   const authUrl = `https://auth.mercadolivre.com.br/authorization?response_type=code&client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}`;
 
   useEffect(() => {
-    // Apenas para depuração
-    console.log("Redirecionando para:", authUrl);
+    console.log('CLIENT_ID:', CLIENT_ID);
+    console.log('REDIRECT_URI:', REDIRECT_URI);
+    console.log('Redirecionando para:', authUrl);
   }, []);
 
   const handleLogin = () => {
