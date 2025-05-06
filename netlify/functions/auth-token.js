@@ -1,7 +1,13 @@
-exports.handler = async function(event) {
-    const body = new URLSearchParams(event.body);
+exports.handler = async function (event, context) {
+    if (event.httpMethod !== 'POST') {
+      return {
+        statusCode: 405,
+        body: JSON.stringify({ error: 'Método não permitido' }),
+      };
+    }
   
-    const code = body.get('code');
+    const body = JSON.parse(event.body || '{}');
+    const code = body.code;
   
     if (!code) {
       return {
@@ -10,30 +16,31 @@ exports.handler = async function(event) {
       };
     }
   
+    const params = new URLSearchParams();
+    params.append('grant_type', 'authorization_code');
+    params.append('client_id', process.env.VITE_MELI_CLIENT_ID);
+    params.append('client_secret', process.env.MELI_CLIENT_SECRET); // ← SEM VITE_
+    params.append('code', code);
+    params.append('redirect_uri', process.env.VITE_REDIRECT_URI);
+  
     try {
-      const res = await fetch('https://api.mercadolibre.com/oauth/token', {
+      const response = await fetch('https://api.mercadolibre.com/oauth/token', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
-        body: new URLSearchParams({
-          grant_type: 'authorization_code',
-          client_id: process.env.VITE_MELI_CLIENT_ID,
-          client_secret: process.env.MELI_CLIENT_SECRET,
-          code,
-          redirect_uri: process.env.VITE_REDIRECT_URI,
-        }),
+        body: params,
       });
   
-      const data = await res.json();
-  
-      if (!res.ok) {
+      if (!response.ok) {
+        const errorText = await response.text();
         return {
-          statusCode: res.status,
-          body: JSON.stringify({ error: data }),
+          statusCode: 500,
+          body: JSON.stringify({ error: 'Erro ao trocar o código por um token: ' + errorText }),
         };
       }
   
+      const data = await response.json();
       return {
         statusCode: 200,
         body: JSON.stringify(data),
@@ -41,7 +48,7 @@ exports.handler = async function(event) {
     } catch (error) {
       return {
         statusCode: 500,
-        body: JSON.stringify({ error: 'Erro interno: ' + error.message }),
+        body: JSON.stringify({ error: 'Erro inesperado: ' + error.message }),
       };
     }
   };
