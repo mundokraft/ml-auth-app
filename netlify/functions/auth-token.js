@@ -1,46 +1,43 @@
-exports.handler = async function (event, context) {
-    if (event.httpMethod !== 'POST') {
-      return {
-        statusCode: 405,
-        body: JSON.stringify({ error: 'Método não permitido' }),
-      };
-    }
-  
-    const body = JSON.parse(event.body || '{}');
-    const code = body.code;
-  
-    if (!code) {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ error: 'Código de autorização ausente' }),
-      };
-    }
-  
-    const params = new URLSearchParams();
-    params.append('grant_type', 'authorization_code');
-    params.append('client_id', process.env.VITE_MELI_CLIENT_ID);
-    params.append('client_secret', process.env.MELI_CLIENT_SECRET); // ← SEM VITE_
-    params.append('code', code);
-    params.append('redirect_uri', process.env.VITE_REDIRECT_URI);
-  
+export async function handler(event) {
     try {
+      const { code } = JSON.parse(event.body || '{}');
+  
+      if (!code) {
+        return {
+          statusCode: 400,
+          body: JSON.stringify({ error: 'Código de autorização ausente' }),
+        };
+      }
+  
+      const clientId = process.env.MELI_CLIENT_ID;
+      const clientSecret = process.env.MELI_CLIENT_SECRET;
+      const redirectUri = process.env.VITE_MELI_REDIRECT_URI;
+  
+      const params = new URLSearchParams({
+        grant_type: 'authorization_code',
+        client_id: clientId,
+        client_secret: clientSecret,
+        code,
+        redirect_uri: redirectUri,
+      });
+  
       const response = await fetch('https://api.mercadolibre.com/oauth/token', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
-        body: params,
+        body: params.toString(),
       });
   
+      const data = await response.json();
+  
       if (!response.ok) {
-        const errorText = await response.text();
         return {
-          statusCode: 500,
-          body: JSON.stringify({ error: 'Erro ao trocar o código por um token: ' + errorText }),
+          statusCode: response.status,
+          body: JSON.stringify({ error: 'Erro ao trocar o código por um token', details: data }),
         };
       }
   
-      const data = await response.json();
       return {
         statusCode: 200,
         body: JSON.stringify(data),
@@ -48,8 +45,8 @@ exports.handler = async function (event, context) {
     } catch (error) {
       return {
         statusCode: 500,
-        body: JSON.stringify({ error: 'Erro inesperado: ' + error.message }),
+        body: JSON.stringify({ error: 'Erro inesperado', details: error.message }),
       };
     }
-  };
+  }
   
